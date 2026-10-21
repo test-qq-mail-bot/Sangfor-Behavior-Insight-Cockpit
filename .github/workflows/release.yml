@@ -82,13 +82,14 @@ jobs:
           {
             echo "## ${TITLE}"
             echo
+            echo "### 更新记录"
+            jq -r '.update_log[]? | "- " + .' config/package.chs.js || echo "- 无更新记录"
+            echo
             echo "- 版本号：\`${VERSION}\`"
             echo "- 提交：\`${GITHUB_SHA}\`"
             echo "- 分支：\`${GITHUB_REF_NAME}\`"
             echo "- 触发方式：${TRIGGER}"
             echo "- 构建时间：$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-            echo
-            echo "压缩包顶层目录为 \`${APP_ID}/\`，可直接上传到日志管理平台的自定义插件。"
           } > "${NOTES_FILE}"
 
           if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
