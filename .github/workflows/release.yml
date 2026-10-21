@@ -47,23 +47,30 @@ jobs:
           fi
 
           APP_ID="cus_insight"
+          if ! [[ "${APP_ID}" =~ ^cus_[a-z]{3,28}$ ]]; then
+            echo "::error::invalid app id: ${APP_ID}"
+            exit 1
+          fi
           TAG="v${VERSION}"
           TITLE="${APP_ID} v${VERSION}"
-          ASSET="${APP_ID}-${VERSION}.zip"
+          ASSET="${APP_ID}.zip"
 
           rm -rf build
-          mkdir -p "build/${APP_ID}"
+          mkdir -p "build/${APP_ID}" dist
           rsync -a \
             --exclude='.git' \
             --exclude='.github' \
+            --exclude='.gitignore' \
             --exclude='build' \
+            --exclude='dist' \
             --exclude='*.zip' \
             --exclude='.DS_Store' \
             ./ "build/${APP_ID}/"
 
-          (cd build && zip -qr "../${ASSET}" "${APP_ID}")
-          test -f "${ASSET}"
-          unzip -l "${ASSET}" | sed -n '1,12p'
+          rm -f "dist/${ASSET}"
+          (cd build && zip -qr "../dist/${ASSET}" "${APP_ID}")
+          test -f "dist/${ASSET}"
+          unzip -l "dist/${ASSET}" | sed -n '1,12p'
 
           if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             TRIGGER="manual"
@@ -92,16 +99,16 @@ jobs:
 
           if gh release view "${TAG}" >/dev/null 2>&1; then
             echo "Release ${TAG} already exists, updating asset and notes."
-            gh release upload "${TAG}" "${ASSET}" --clobber
+            gh release upload "${TAG}" "dist/${ASSET}" --clobber
             gh release edit "${TAG}" --title "${TITLE}" --notes-file "${NOTES_FILE}"
           else
             echo "Creating release ${TAG}."
             if [ "${TAG_EXISTS}" = "true" ]; then
-              gh release create "${TAG}" "${ASSET}" \
+              gh release create "${TAG}" "dist/${ASSET}" \
                 --title "${TITLE}" \
                 --notes-file "${NOTES_FILE}"
             else
-              gh release create "${TAG}" "${ASSET}" \
+              gh release create "${TAG}" "dist/${ASSET}" \
                 --target "${GITHUB_SHA}" \
                 --title "${TITLE}" \
                 --notes-file "${NOTES_FILE}"
