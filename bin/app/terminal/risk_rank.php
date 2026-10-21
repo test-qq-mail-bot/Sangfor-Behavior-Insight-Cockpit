@@ -17,7 +17,7 @@ function badash_risk_rank($params)
     $sql = 'select /* COLLECT:collector.date@core */ /* ORDER:int64_desc */ '
         . 'risk_name `key`, risk_type, risk_level, sum(i(`count`)) cnt, distinct_count(`user`) user_cnt '
         . 'from ' . badash_table('risk_term', '1day', $start, $end)
-        . ' group by risk_name, risk_type, risk_level order by cnt limit ' . $limit;
+        . ' group by `key`, risk_type, risk_level order by cnt limit ' . $limit;
 
     $ret = badash_sql(badash_query_id('risk_rank', array($start, $end, $limit)), $sql, false, array());
     if ($ret === null) {

@@ -17,7 +17,7 @@ function badash_http_type($params)
     $sql = 'select /* COLLECT:collector.date@core */ /* ORDER:int64_desc */ '
         . $group . ' `key`, sum(i(total_flux)) flux, distinct_count(`user`) user_cnt '
         . 'from ' . badash_table('http_flux_midtable', '1day', $start, $end)
-        . ' group by ' . $group . ' order by flux';
+        . ' group by `key` order by flux';
 
     $ret = badash_sql(badash_query_id('http_type', array($start, $end, $group)), $sql, false, array());
     if ($ret === null) {

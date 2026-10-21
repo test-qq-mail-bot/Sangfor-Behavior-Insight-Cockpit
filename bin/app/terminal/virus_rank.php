@@ -17,7 +17,7 @@ function badash_virus_rank($params)
     $sql = 'select /* COLLECT:collector.date@core */ /* ORDER:int64_desc */ '
         . 'virus_type `key`, sum(i(threat_count)) cnt, distinct_count(`user`) user_cnt '
         . 'from ' . badash_table('virus', '1day', $start, $end)
-        . ' group by virus_type order by cnt limit ' . $limit;
+        . ' group by `key` order by cnt limit ' . $limit;
 
     $ret = badash_sql(badash_query_id('virus_rank', array($start, $end, $limit)), $sql, false, array());
     if ($ret === null) {

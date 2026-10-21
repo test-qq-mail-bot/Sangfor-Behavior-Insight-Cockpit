@@ -17,7 +17,7 @@ function badash_action_rank($params)
     $sql = 'select /* COLLECT:collector.date@core */ /* ORDER:int64_desc */ '
         . 'categories `key`, sum(i(`count`)) cnt, distinct_count(`user`) user_cnt '
         . 'from ' . badash_table('action_collect', '1day', $start, $end)
-        . ' group by categories order by cnt limit ' . $limit;
+        . ' group by `key` order by cnt limit ' . $limit;
 
     $ret = badash_sql(badash_query_id('action_rank', array($start, $end, $limit)), $sql, false, array());
     if ($ret === null) {

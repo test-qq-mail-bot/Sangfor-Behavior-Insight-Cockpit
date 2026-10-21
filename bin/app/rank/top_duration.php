@@ -18,7 +18,7 @@ function badash_top_duration($params)
     $sql = 'select /* COLLECT:collector.date@core */ /* ORDER:int64_desc */ '
         . '`user` `key`, serv, sum(i(seconds)) seconds, sum(i(total_flux)) flux '
         . 'from ' . badash_table('user_serv_duration', '1day', $start, $end)
-        . ' group by `user`, serv order by seconds limit ' . $limit;
+        . ' group by `key`, serv order by seconds limit ' . $limit;
 
     $ret = badash_sql(badash_query_id('top_duration', array($start, $end, $limit)), $sql, false, array());
     if ($ret === null) {

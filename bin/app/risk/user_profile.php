@@ -18,12 +18,12 @@ function badash_user_profile($params)
     $riskSql = 'select /* COLLECT:collector.date@core */ /* ORDER:int64_desc */ '
         . '`user` `key`, sum(`count`) risk_cnt '
         . 'from ' . badash_table('risk_report', '1day', $start, $end)
-        . ' group by `user` order by risk_cnt limit ' . $limit;
+        . ' group by `key` order by risk_cnt limit ' . $limit;
 
     $actionSql = 'select /* COLLECT:collector.date@core */ /* ORDER:int64_desc */ '
         . '`user` `key`, sum(i(`count`)) action_cnt '
         . 'from ' . badash_table('action_collect', '1day', $start, $end)
-        . ' group by `user` order by action_cnt limit ' . $limit;
+        . ' group by `key` order by action_cnt limit ' . $limit;
 
     $riskRows = badash_rows(badash_sql(badash_query_id('profile_risk', array($start, $end, $limit)), $riskSql, false, array()));
     $actionRows = badash_rows(badash_sql(badash_query_id('profile_action', array($start, $end, $limit)), $actionSql, false, array()));

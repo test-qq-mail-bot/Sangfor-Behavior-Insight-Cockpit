@@ -18,7 +18,7 @@ function badash_im_rank($params)
         . 'chatype `key`, sum(i(`count`)) cnt, distinct_count(`user`) user_cnt, '
         . 'distinct_count(session) session_cnt '
         . 'from ' . badash_table('im', '1day', $start, $end)
-        . ' group by chatype order by cnt limit ' . $limit;
+        . ' group by `key` order by cnt limit ' . $limit;
 
     $ret = badash_sql(badash_query_id('im_rank', array($start, $end, $limit)), $sql, false, array());
     if ($ret === null) {

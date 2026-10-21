@@ -18,7 +18,7 @@ function badash_domain_rank($params)
         . 'domain `key`, sum(i(total_flux)) flux, sum(i(`count`)) cnt, '
         . 'sum(i(seconds)) seconds, distinct_count(`user`) user_cnt '
         . 'from ' . badash_table('domain_access', '1day', $start, $end)
-        . ' group by domain order by flux limit ' . $limit;
+        . ' group by `key` order by flux limit ' . $limit;
 
     $ret = badash_sql(badash_query_id('domain_rank', array($start, $end, $limit)), $sql, false, array());
     if ($ret === null) {

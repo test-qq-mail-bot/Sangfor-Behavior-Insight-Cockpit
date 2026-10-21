@@ -28,7 +28,7 @@ function badash_top_flux($params)
     $sql = 'select /* COLLECT:collector.date@core */ /* ORDER:int64_desc */ '
         . $field . ' `key`, sum(i(total_flux)) flux, sum(i(up_flux)) up_flux, '
         . 'sum(i(down_flux)) down_flux, sum(i(`count`)) cnt '
-        . 'from ' . $table . ' group by ' . $field . ' order by flux limit ' . $limit;
+        . 'from ' . $table . ' group by `key` order by flux limit ' . $limit;
 
     $query = badash_query_id('top_flux', array($start, $end, $period, $dim, $limit));
     $ret = badash_sql($query, $sql, false, array());

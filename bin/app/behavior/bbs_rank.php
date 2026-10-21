@@ -17,7 +17,7 @@ function badash_bbs_rank($params)
     $sql = 'select /* COLLECT:collector.date@core */ /* ORDER:int64_desc */ '
         . 'bbs_title title, categories, sum(i(`count`)) cnt '
         . 'from ' . badash_table('web_bbs', '1day', $start, $end)
-        . ' group by bbs_title, categories order by cnt limit ' . $limit;
+        . ' group by `title`, categories order by cnt limit ' . $limit;
 
     $ret = badash_sql(badash_query_id('bbs_rank', array($start, $end, $limit)), $sql, false, array());
     if ($ret === null) {

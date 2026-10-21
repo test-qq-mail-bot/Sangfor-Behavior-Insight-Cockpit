@@ -18,7 +18,7 @@ function badash_share_rank($params)
     $sql = 'select /* COLLECT:collector.date@core */ /* ORDER:int64_desc */ '
         . '`user` `key`, max(i(shared_tm_count)) shared_cnt, terminal '
         . 'from ' . badash_table('share_access', '1day', $start, $end)
-        . ' group by `user`, terminal order by shared_cnt limit ' . $limit;
+        . ' group by `key`, terminal order by shared_cnt limit ' . $limit;
 
     $ret = badash_sql(badash_query_id('share_rank', array($start, $end, $limit)), $sql, false, array());
     if ($ret === null) {
