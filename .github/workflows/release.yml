@@ -78,12 +78,17 @@ jobs:
             TRIGGER="push"
           fi
 
+          UPDATE_LOG="$(jq -r --arg v "${VERSION}" '.update_log[]? | select(startswith($v + "：") or startswith($v + ": ")) | "- " + .' config/package.chs.js || true)"
           NOTES_FILE="${RUNNER_TEMP}/release-notes.md"
           {
             echo "## ${TITLE}"
             echo
             echo "### 更新记录"
-            jq -r '.update_log[]? | "- " + .' config/package.chs.js || echo "- 无更新记录"
+            if [ -n "${UPDATE_LOG}" ]; then
+              echo "${UPDATE_LOG}"
+            else
+              echo "- 无更新记录"
+            fi
             echo
             echo "- 版本号：\`${VERSION}\`"
             echo "- 提交：\`${GITHUB_SHA}\`"
