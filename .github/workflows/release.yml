@@ -99,6 +99,12 @@ jobs:
 
           if gh release view "${TAG}" >/dev/null 2>&1; then
             echo "Release ${TAG} already exists, updating asset and notes."
+            while IFS= read -r stale; do
+              if [ -n "${stale}" ] && [ "${stale}" != "${ASSET}" ]; then
+                echo "Removing stale asset: ${stale}"
+                gh release delete-asset "${TAG}" "${stale}" --yes
+              fi
+            done < <(gh release view "${TAG}" --json assets -q '.assets[].name')
             gh release upload "${TAG}" "dist/${ASSET}" --clobber
             gh release edit "${TAG}" --title "${TITLE}" --notes-file "${NOTES_FILE}"
           else
