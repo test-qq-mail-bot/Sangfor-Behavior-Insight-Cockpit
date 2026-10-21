@@ -113,7 +113,7 @@ if (!function_exists('badash_params')) {
 
     /**
      * 构造 mdd 中间表路径，语法见文档 2.1.5 与 2.5.2.1.1：
-     * [0-9]*/midtable/<table>/<period>,<start>-<end>
+     * 形如 [0-9]* 前缀 + /midtable/<table>/<period>,<start>-<end>
      */
     function badash_table($table, $period, $start, $end)
     {
