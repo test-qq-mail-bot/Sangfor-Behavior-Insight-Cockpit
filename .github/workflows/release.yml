@@ -1,0 +1,118 @@
+name: Release cus_insight
+
+on:
+  push:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cus_insight-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build and publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ ! -f version.js ]; then
+            echo "::error::version.js not found at repository root"
+            exit 1
+          fi
+
+          VERSION="$(jq -r '.version // empty' version.js)"
+          if [ -z "${VERSION}" ]; then
+            echo "::error::version.js does not contain a version field"
+            exit 1
+          fi
+          if ! [[ "${VERSION}" =~ ^[0-9A-Za-z._-]+$ ]]; then
+            echo "::error::invalid version: ${VERSION}"
+            exit 1
+          fi
+
+          APP_ID="cus_insight"
+          TAG="v${VERSION}"
+          TITLE="${APP_ID} v${VERSION}"
+          ASSET="${APP_ID}-${VERSION}.zip"
+
+          rm -rf build
+          mkdir -p "build/${APP_ID}"
+          rsync -a \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='build' \
+            --exclude='*.zip' \
+            --exclude='.DS_Store' \
+            ./ "build/${APP_ID}/"
+
+          (cd build && zip -qr "../${ASSET}" "${APP_ID}")
+          test -f "${ASSET}"
+          unzip -l "${ASSET}" | sed -n '1,12p'
+
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            TRIGGER="manual"
+          else
+            TRIGGER="push"
+          fi
+
+          NOTES_FILE="${RUNNER_TEMP}/release-notes.md"
+          {
+            echo "## ${TITLE}"
+            echo
+            echo "- 版本号：\`${VERSION}\`"
+            echo "- 提交：\`${GITHUB_SHA}\`"
+            echo "- 分支：\`${GITHUB_REF_NAME}\`"
+            echo "- 触发方式：${TRIGGER}"
+            echo "- 构建时间：$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo
+            echo "压缩包顶层目录为 \`${APP_ID}/\`，可直接上传到日志管理平台的自定义插件。"
+          } > "${NOTES_FILE}"
+
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            TAG_EXISTS=true
+          else
+            TAG_EXISTS=false
+          fi
+
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            echo "Release ${TAG} already exists, updating asset and notes."
+            gh release upload "${TAG}" "${ASSET}" --clobber
+            gh release edit "${TAG}" --title "${TITLE}" --notes-file "${NOTES_FILE}"
+          else
+            echo "Creating release ${TAG}."
+            if [ "${TAG_EXISTS}" = "true" ]; then
+              gh release create "${TAG}" "${ASSET}" \
+                --title "${TITLE}" \
+                --notes-file "${NOTES_FILE}"
+            else
+              gh release create "${TAG}" "${ASSET}" \
+                --target "${GITHUB_SHA}" \
+                --title "${TITLE}" \
+                --notes-file "${NOTES_FILE}"
+            fi
+          fi
+
+          RELEASE_URL="$(gh release view "${TAG}" --json url -q .url)"
+          {
+            echo "### Release published"
+            echo
+            echo "- 版本：\`${VERSION}\`"
+            echo "- 资产：\`${ASSET}\`"
+            echo "- 下载：${RELEASE_URL}"
+          } >> "${GITHUB_STEP_SUMMARY}"
