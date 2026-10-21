@@ -21,6 +21,9 @@
     ],
     "history": [],
     "update_log": [
+        "20261021-v5：修复 api.sql@custom 参数传递错误，普通查询不再只返回 mdd 路径，恢复全站数据",
+        "20261021-v5：修复风险概览、风险终端、人员画像误用 risk_term，改查 risk_report 并对 count 使用 i()",
+        "20261021-v5：修复终端类型/共享接入使用 max 聚合、表结构接口返回空列的问题",
         "20261021-v4：修复排行类接口中 GROUP BY 字段与 SELECT 别名不一致导致的 not found ... in select fields 错误",
         "20261021-v3：修复 common.php 注释中的 */ 提前结束块注释，导致 launch.php 返回 HTTP 500 的问题",
         "20261021-v2：修复 SQL 根路径、重复加载保护与接口错误返回"

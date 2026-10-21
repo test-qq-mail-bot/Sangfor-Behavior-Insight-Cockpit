@@ -30,7 +30,7 @@ function badash_overview($params)
     $domainRows = badash_rows(badash_sql(badash_query_id('overview_domain', array($start, $end)), $domainSql, false, array()));
 
     $riskSql = 'select /* COLLECT:collector.date@core */ sum(i(`count`)) risk_cnt '
-        . 'from ' . badash_table('risk_term', '1day', $start, $end);
+        . 'from ' . badash_table('risk_report', '1day', $start, $end);
     $riskRows = badash_rows(badash_sql(badash_query_id('overview_risk', array($start, $end)), $riskSql, false, array()));
 
     return array(

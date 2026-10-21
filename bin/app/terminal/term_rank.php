@@ -15,7 +15,7 @@ function badash_term_rank($params)
     $limit = badash_int($params, 'limit', 10, 1, 50);
 
     $sql = 'select /* COLLECT:collector.date@core */ /* ORDER:int64_desc */ '
-        . 'terminal `key`, max(i(mt_count)) cnt, distinct_count(`user`) user_cnt '
+        . 'terminal `key`, sum(i(mt_count)) cnt, distinct_count(`user`) user_cnt '
         . 'from ' . badash_table('term_type', '1day', $start, $end)
         . ' group by `key` order by cnt limit ' . $limit;
 

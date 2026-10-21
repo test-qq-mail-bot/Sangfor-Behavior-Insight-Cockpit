@@ -193,9 +193,13 @@ if (!function_exists('badash_params')) {
             'app_args' => array(
                 'options' => array(badash_root(), $sql_str),
             ),
-            'output' => is_array($output) ? $output : array(),
-            'mdd' => $mdd ? true : false,
         );
+        if (is_array($output) && count($output) > 0) {
+            $args['output'] = $output;
+        }
+        if ($mdd) {
+            $args['mdd'] = true;
+        }
 
         $sql = ldb_invoke('call_func', 'api.sql@custom');
         if (!is_object($sql)) {

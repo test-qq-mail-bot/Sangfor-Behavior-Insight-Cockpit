@@ -634,7 +634,6 @@
             [
                 { key: 'key', label: '威胁名称' },
                 { key: 'risk_type', label: '风险类型' },
-                { key: 'risk_level', label: '等级' },
                 { key: 'cnt', label: '次数', num: true, format: num },
                 { key: 'user_cnt', label: '用户数', num: true, format: num }
             ],

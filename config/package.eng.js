@@ -21,6 +21,9 @@
     ],
     "history": [],
     "update_log": [
+        "20261021-v5: fix api.sql@custom arguments so queries return rows instead of only an mdd path",
+        "20261021-v5: use risk_report instead of the missing risk_term table and convert count with i()",
+        "20261021-v5: fix terminal/share aggregation and empty schema columns",
         "20261021-v4: fix \"not found ... in select fields\" by grouping on SELECT aliases in ranking endpoints",
         "20261021-v3: fix HTTP 500 caused by */ ending a block comment early in common.php",
         "20261021-v2: fix SQL root path, duplicate include guard and API error response"

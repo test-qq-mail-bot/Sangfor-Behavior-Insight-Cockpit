@@ -16,7 +16,7 @@ function badash_share_rank($params)
     $limit = badash_int($params, 'limit', 10, 1, 50);
 
     $sql = 'select /* COLLECT:collector.date@core */ /* ORDER:int64_desc */ '
-        . '`user` `key`, max(i(shared_tm_count)) shared_cnt, terminal '
+        . '`user` `key`, sum(i(shared_tm_count)) shared_cnt, terminal '
         . 'from ' . badash_table('share_access', '1day', $start, $end)
         . ' group by `key`, terminal order by shared_cnt limit ' . $limit;
 

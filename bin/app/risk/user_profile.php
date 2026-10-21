@@ -16,7 +16,7 @@ function badash_user_profile($params)
     $limit = badash_int($params, 'limit', 10, 1, 50);
 
     $riskSql = 'select /* COLLECT:collector.date@core */ /* ORDER:int64_desc */ '
-        . '`user` `key`, sum(`count`) risk_cnt '
+        . '`user` `key`, sum(i(`count`)) risk_cnt '
         . 'from ' . badash_table('risk_report', '1day', $start, $end)
         . ' group by `key` order by risk_cnt limit ' . $limit;
 
