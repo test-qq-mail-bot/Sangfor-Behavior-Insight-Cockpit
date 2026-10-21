@@ -21,6 +21,7 @@
     ],
     "history": [],
     "update_log": [
+        "20261021-v3: fix HTTP 500 caused by */ ending a block comment early in common.php",
         "20261021-v2: fix SQL root path, duplicate include guard and API error response"
     ]
 }
