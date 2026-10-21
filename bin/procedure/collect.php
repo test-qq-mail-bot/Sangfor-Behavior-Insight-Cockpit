@@ -1,0 +1,50 @@
+<?php
+/**
+ * 定时采集过程：汇总前一天流量与风险数据并写入日志。
+ * 由 crond.collect@cus_insight 拉起（对照示例应用 bin/procedure/import_data.php）。
+ */
+
+require_once(ldb_ext_root() . "/bin/mapreduce/api/core.php");
+require_once dirname(__DIR__) . '/lib/common.php';
+
+call_user_func(function () {
+
+    $main = function ($object) {
+        $yesterday = date('Ymd', time() - 86400);
+
+        $sql = 'select /* COLLECT:collector.date@core */ '
+            . 'sum(i(total_flux)) flux, distinct_count(`user`) user_cnt '
+            . 'from ' . badash_table('flux_duration_action', '1day', $yesterday, $yesterday);
+
+        $rows = badash_rows(badash_sql(badash_query_id('crond_daily', array($yesterday)), $sql, false, array()));
+        if (count($rows) === 0) {
+            $object->lasterr = 'empty result for ' . $yesterday;
+            badash_error('crond collect: ' . $object->lasterr);
+            return -1;
+        }
+
+        $flux = isset($rows[0]['flux']) ? intval($rows[0]['flux']) : 0;
+        $users = isset($rows[0]['user_cnt']) ? intval($rows[0]['user_cnt']) : 0;
+        badash_info('daily summary date=' . $yesterday . ' flux=' . $flux . ' users=' . $users);
+        return 0;
+    };
+
+    $error = function ($object) {
+        return isset($object->lasterr) ? $object->lasterr : '';
+    };
+
+    $destroy = function ($object) {
+    };
+
+    $constructor = function ($context) use (&$main, &$error, &$destroy) {
+        return (object)array(
+            'main' => $main,
+            'error' => $error,
+            'destroy' => $destroy,
+            'lasterr' => null,
+            'context' => $context,
+        );
+    };
+
+    ldb_register(__FILE__, $constructor);
+});
