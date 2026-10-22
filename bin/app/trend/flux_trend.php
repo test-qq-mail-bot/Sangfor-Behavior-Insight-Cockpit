@@ -16,7 +16,7 @@ function badash_flux_trend($params)
     $table = badash_table('user_flux_trend', $period, $start, $end);
 
     $sql = 'select /* COLLECT:collector.date@core */ time_slice, '
-        . 'sum(up_flux) up_flux, sum(down_flux) down_flux, sum(total_flux) total_flux, sum(`count`) cnt '
+        . 'sum(up_flux) up_flux, sum(down_flux) down_flux, sum(`count`) cnt '
         . 'from ' . $table . ' group by time_slice';
 
     $ret = badash_sql(badash_query_id('flux_trend', array($start, $end, $period)), $sql, false, array());
@@ -28,11 +28,13 @@ function badash_flux_trend($params)
     $series = array();
     foreach ($rows as $row) {
         $slice = intval($row['time_slice']);
+        $up = isset($row['up_flux']) ? badash_num($row['up_flux']) : 0;
+        $down = isset($row['down_flux']) ? badash_num($row['down_flux']) : 0;
         $series[$slice] = array(
             'time_slice' => $slice,
-            'up_flux' => isset($row['up_flux']) ? badash_num($row['up_flux']) : 0,
-            'down_flux' => isset($row['down_flux']) ? badash_num($row['down_flux']) : 0,
-            'total_flux' => isset($row['total_flux']) ? badash_num($row['total_flux']) : 0,
+            'up_flux' => $up,
+            'down_flux' => $down,
+            'total_flux' => $up + $down,
             'cnt' => isset($row['cnt']) ? badash_num($row['cnt']) : 0,
         );
     }

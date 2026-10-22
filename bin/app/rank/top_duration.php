@@ -16,7 +16,8 @@ function badash_top_duration($params)
     $limit = badash_int($params, 'limit', 10, 1, 500);
 
     $sql = 'select /* COLLECT:collector.date@core */ /* ORDER:int64_desc */ '
-        . '`user` `key`, serv, sum(i(seconds)) seconds, sum(i(total_flux)) flux '
+        . '`user` `key`, serv, sum(i(seconds)) seconds, sum(i(up_flux)) up_flux, '
+        . 'sum(i(down_flux)) down_flux '
         . 'from ' . badash_table('user_serv_duration', '1day', $start, $end)
         . ' group by `key`, serv order by seconds limit ' . $limit;
 
@@ -25,6 +26,13 @@ function badash_top_duration($params)
         return null;
     }
     $rows = badash_rows_int(badash_rows($ret), 'seconds');
+    foreach ($rows as $index => $row) {
+        $up = isset($row['up_flux']) ? badash_num($row['up_flux']) : 0;
+        $down = isset($row['down_flux']) ? badash_num($row['down_flux']) : 0;
+        $rows[$index]['up_flux'] = $up;
+        $rows[$index]['down_flux'] = $down;
+        $rows[$index]['flux'] = $up + $down;
+    }
 
     $servs = array();
     foreach ($rows as $row) {

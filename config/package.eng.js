@@ -9,7 +9,7 @@
     "description": "A full-featured dashboard built on mdd midtables of the Behavior Awareness System: traffic and duration ranking, flow trend, domain and HTTP protocol analysis, web behavior, terminal access, risk terminals and user profile. Supports JSON import, view generation and schema inspection.",
     "author": "cus_insight team",
     "size": "136K",
-    "last_modify": "2026-10-22 00:00:00",
+    "last_modify": "2026-10-22 10:51:43",
     "logo": "./img/logo.png",
     "background": "./img/app_bg.jpg",
     "color": "#2c58c9",
@@ -21,6 +21,8 @@
     ],
     "history": [],
     "update_log": [
+        "20261022-v1: show traffic chart values in readable B/KB/MB/GB/TB units",
+        "20261022-v1: compute total traffic as upload plus download for consistent overview and rankings",
         "20261022-v6: fix traffic, trend and profile totals truncated to 2GB on 32-bit PHP",
         "20261022-v6: add column sorting, linked filters, pagination and page-size switching",
         "20261021-v5: fix api.sql@custom arguments so queries return rows instead of only an mdd path",

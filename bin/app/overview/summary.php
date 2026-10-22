@@ -14,7 +14,7 @@ function badash_overview($params)
     list($start, $end) = badash_date_range($params);
 
     $sql = 'select /* COLLECT:collector.date@core */ '
-        . 'sum(i(total_flux)) flux, sum(i(up_flux)) up_flux, sum(i(down_flux)) down_flux, '
+        . 'sum(i(up_flux)) up_flux, sum(i(down_flux)) down_flux, '
         . 'distinct_count(`user`) user_cnt, sum(i(`count`)) event_cnt '
         . 'from ' . badash_table('flux_duration_action', '1day', $start, $end);
 
@@ -24,6 +24,8 @@ function badash_overview($params)
     }
     $rows = badash_rows($ret);
     $summary = count($rows) > 0 ? $rows[0] : array();
+    $flux = (isset($summary['up_flux']) ? badash_num($summary['up_flux']) : 0)
+        + (isset($summary['down_flux']) ? badash_num($summary['down_flux']) : 0);
 
     $domainSql = 'select /* COLLECT:collector.date@core */ distinct_count(domain) domain_cnt '
         . 'from ' . badash_table('domain_access', '1day', $start, $end);
@@ -36,7 +38,7 @@ function badash_overview($params)
     return array(
         'start' => $start,
         'end' => $end,
-        'flux' => isset($summary['flux']) ? badash_num($summary['flux']) : 0,
+        'flux' => $flux,
         'up_flux' => isset($summary['up_flux']) ? badash_num($summary['up_flux']) : 0,
         'down_flux' => isset($summary['down_flux']) ? badash_num($summary['down_flux']) : 0,
         'user_cnt' => isset($summary['user_cnt']) ? badash_num($summary['user_cnt']) : 0,

@@ -75,7 +75,7 @@
         ctx.fillText(message || '暂无数据', state.width / 2, state.height / 2);
     }
 
-    function drawYAxis(state, box, maxValue, steps) {
+    function drawYAxis(state, box, maxValue, steps, formatValue) {
         var ctx = state.ctx;
         ctx.strokeStyle = '#e6ebf2';
         ctx.fillStyle = '#7b8794';
@@ -85,11 +85,13 @@
         for (var i = 0; i <= steps; i++) {
             var y = box.top + (box.height / steps) * i;
             var value = maxValue - (maxValue / steps) * i;
+            var text = formatValue ? formatValue(value) : compact(value);
             ctx.beginPath();
             ctx.moveTo(box.left, y);
             ctx.lineTo(box.left + box.width, y);
             ctx.stroke();
-            ctx.fillText(shorten(compact(value), 8), box.left - 6, y + 4);        }
+            ctx.fillText(shorten(text, 12), box.left - 6, y + 4);
+        }
     }
 
     function bar(canvas, items, options) {
@@ -99,6 +101,7 @@
             drawEmpty(state, (options && options.emptyText) || '暂无数据');
             return;
         }
+        var formatValue = (options && options.formatValue) || compact;
         var box = { left: 56, top: 16, width: state.width - 76, height: state.height - 52 };
         var maxValue = 0;
         for (var i = 0; i < items.length; i++) {
@@ -108,7 +111,7 @@
             }
         }
         maxValue = niceMax(maxValue);
-        drawYAxis(state, box, maxValue, 5);
+        drawYAxis(state, box, maxValue, 5, formatValue);
 
         var slot = box.width / items.length;
         var barWidth = Math.max(6, Math.min(42, slot * 0.55));
@@ -131,7 +134,7 @@
             ctx.fillText(fitLabel(ctx, items[j].label, Math.max(26, slot * 0.6), 2), x + barWidth / 2, box.top + box.height + 16);
             if (h > 18) {
                 ctx.fillStyle = '#334155';
-                ctx.fillText(compact(value), x + barWidth / 2, y - 4);
+                ctx.fillText(formatValue(value), x + barWidth / 2, y - 4);
             }
         }
     }
@@ -143,6 +146,7 @@
             drawEmpty(state, (options && options.emptyText) || '暂无数据');
             return;
         }
+        var formatValue = (options && options.formatValue) || compact;
         var box = { left: 56, top: 40, width: state.width - 76, height: state.height - 76 };
         var maxValue = 0;
         for (var s = 0; s < series.length; s++) {
@@ -154,7 +158,7 @@
             }
         }
         maxValue = niceMax(maxValue);
-        drawYAxis(state, box, maxValue, 5);
+        drawYAxis(state, box, maxValue, 5, formatValue);
 
         var stepX = labels.length > 1 ? box.width / (labels.length - 1) : 0;
 

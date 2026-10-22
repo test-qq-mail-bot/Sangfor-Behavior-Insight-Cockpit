@@ -26,16 +26,31 @@ function badash_top_flux($params)
     }
 
     $sql = 'select /* COLLECT:collector.date@core */ /* ORDER:int64_desc */ '
-        . $field . ' `key`, sum(i(total_flux)) flux, sum(i(up_flux)) up_flux, '
+        . $field . ' `key`, sum(i(total_flux)) sort_flux, sum(i(up_flux)) up_flux, '
         . 'sum(i(down_flux)) down_flux, sum(i(`count`)) cnt '
-        . 'from ' . $table . ' group by `key` order by flux limit ' . $limit;
+        . 'from ' . $table . ' group by `key` order by sort_flux limit ' . $limit;
 
     $query = badash_query_id('top_flux', array($start, $end, $period, $dim, $limit));
     $ret = badash_sql($query, $sql, false, array());
     if ($ret === null) {
         return null;
     }
-    $rows = badash_rows_int(badash_rows($ret), 'flux');
+    $rows = badash_rows($ret);
+    foreach ($rows as $index => $row) {
+        $up = isset($row['up_flux']) ? badash_num($row['up_flux']) : 0;
+        $down = isset($row['down_flux']) ? badash_num($row['down_flux']) : 0;
+        $rows[$index]['up_flux'] = $up;
+        $rows[$index]['down_flux'] = $down;
+        $rows[$index]['flux'] = $up + $down;
+        $rows[$index]['cnt'] = isset($row['cnt']) ? badash_num($row['cnt']) : 0;
+        unset($rows[$index]['sort_flux']);
+    }
+    usort($rows, function ($a, $b) {
+        if ($a['flux'] == $b['flux']) {
+            return 0;
+        }
+        return $a['flux'] < $b['flux'] ? 1 : -1;
+    });
 
     if ($dim === 'user') {
         $users = array();

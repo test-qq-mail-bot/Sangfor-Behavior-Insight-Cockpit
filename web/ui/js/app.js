@@ -111,6 +111,38 @@
         return Math.round(n) + ' 秒';
     }
 
+    function chartBytes(value) {
+        var n = Number(value);
+        if (!isFinite(n) || n <= 0) {
+            return '0 B';
+        }
+        var units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+        var index = 0;
+        while (n >= 1024 && index < units.length - 1) {
+            n = n / 1024;
+            index++;
+        }
+        var digits = index === 0 ? 0 : (n >= 100 ? 1 : 2);
+        return parseFloat(n.toFixed(digits)) + ' ' + units[index];
+    }
+
+    function chartDuration(value) {
+        var n = Number(value);
+        if (!isFinite(n) || n <= 0) {
+            return '0 秒';
+        }
+        if (n >= 86400) {
+            return parseFloat((n / 86400).toFixed(1)) + ' 天';
+        }
+        if (n >= 3600) {
+            return parseFloat((n / 3600).toFixed(1)) + ' 小时';
+        }
+        if (n >= 60) {
+            return parseFloat((n / 60).toFixed(1)) + ' 分钟';
+        }
+        return Math.round(n) + ' 秒';
+    }
+
     function params(extra) {
         var result = { start: state.start, end: state.end, limit: TABLE_LIMIT };
         if (extra) {
@@ -784,16 +816,16 @@
         render();
     }
 
-    function renderChart(container, type, payload) {
+    function renderChart(container, type, payload, options) {
         var wrap = el('div', 'chart-wrap');
         var canvas = document.createElement('canvas');
         wrap.appendChild(canvas);
         container.appendChild(wrap);
         raf(function () {
             if (type === 'bar') {
-                window.BadashChart.bar(canvas, payload);
+                window.BadashChart.bar(canvas, payload, options);
             } else {
-                window.BadashChart.line(canvas, payload.labels, payload.series);
+                window.BadashChart.line(canvas, payload.labels, payload.series, options);
             }
         });
     }
@@ -871,7 +903,7 @@
                 var rows = data.rows || [];
                 renderChart(body, 'bar', rows.slice(0, 10).map(function (row) {
                     return { label: row.name || row.key, value: row.flux };
-                }));
+                }), { formatValue: chartBytes });
                 var holder = el('div');
                 var columns = [
                     { key: 'name', label: '名称' },
@@ -903,7 +935,7 @@
             var rows = data.rows || [];
             renderChart(s.body, 'bar', rows.slice(0, 10).map(function (row) {
                 return { label: row.user_name || row.key, value: row.seconds };
-            }));
+            }), { formatValue: chartDuration });
             var holder = el('div');
             renderTable(holder, [
                 { key: 'user_name', label: '用户' },
@@ -917,7 +949,7 @@
         });
     }
 
-    function trendModule(root, title, hint, apiName, periods, defaultPeriod, seriesBuilder) {
+    function trendModule(root, title, hint, apiName, periods, defaultPeriod, seriesBuilder, chartOptions) {
         var s = section(title, hint);
         var chipBar = el('div', 'chips');
         var body = el('div');
@@ -944,7 +976,7 @@
                 var labels = rows.map(function (row) {
                     return row.time_slice;
                 });
-                renderChart(body, 'line', { labels: labels, series: seriesBuilder(rows) });
+                renderChart(body, 'line', { labels: labels, series: seriesBuilder(rows) }, chartOptions);
             }).catch(function (error) {
                 if (current !== seq) {
                     return;
@@ -969,7 +1001,8 @@
                     { name: '上行', data: rows.map(function (row) { return row.up_flux; }) },
                     { name: '下行', data: rows.map(function (row) { return row.down_flux; }) }
                 ];
-            }
+            },
+            { formatValue: chartBytes }
         );
     }
 
@@ -997,7 +1030,7 @@
             var rows = data.rows || [];
             renderChart(s.body, 'bar', rows.slice(0, 10).map(function (row) {
                 return { label: row.key, value: row.flux };
-            }));
+            }), { formatValue: chartBytes });
             var holder = el('div');
             renderTable(holder, [
                 { key: 'key', label: '域名' },
@@ -1033,7 +1066,7 @@
                 var rows = data.rows || [];
                 renderChart(body, 'bar', rows.slice(0, 10).map(function (row) {
                     return { label: row.key, value: row.flux };
-                }));
+                }), { formatValue: chartBytes });
                 var holder = el('div');
                 renderTable(holder, [
                     { key: 'key', label: group === 'filetype' ? '文件类型' : '协议' },
