@@ -15,16 +15,50 @@ function badash_share_rank($params)
     list($start, $end) = badash_date_range($params);
     $limit = badash_int($params, 'limit', 10, 1, 500);
 
-    $sql = 'select /* COLLECT:collector.date@core */ /* ORDER:int64_desc */ '
-        . '`user` `key`, sum(i(shared_tm_count)) shared_cnt, terminal '
+    $sql = 'select /* COLLECT:collector.date@core */ '
+        . '`user` `key`, shared_tm_count shared_cnt, terminal '
         . 'from ' . badash_table('share_access', '1day', $start, $end)
-        . ' group by `key`, terminal order by shared_cnt limit ' . $limit;
+        . ' limit 5000';
 
     $ret = badash_sql(badash_query_id('share_rank', array($start, $end, $limit)), $sql, false, array());
     if ($ret === null) {
         return null;
     }
-    $rows = badash_rows_int(badash_rows($ret), 'shared_cnt');
+
+    $groups = array();
+    foreach (badash_rows($ret) as $row) {
+        $userKey = isset($row['key']) ? (string)$row['key'] : '';
+        $terminal = isset($row['terminal']) ? (string)$row['terminal'] : '';
+        $value = isset($row['shared_cnt']) ? badash_i64set($row['shared_cnt']) : 0;
+        if (!isset($groups[$userKey])) {
+            $groups[$userKey] = array();
+        }
+        if (!isset($groups[$userKey][$terminal]) || $value > $groups[$userKey][$terminal]['shared_cnt']) {
+            $groups[$userKey][$terminal] = array(
+                'key' => $userKey,
+                'terminal' => $terminal,
+                'shared_cnt' => $value,
+            );
+        }
+    }
+
+    $rows = array();
+    foreach ($groups as $userGroups) {
+        foreach ($userGroups as $group) {
+            $rows[] = $group;
+        }
+    }
+    usort($rows, function ($left, $right) {
+        if ($left['shared_cnt'] === $right['shared_cnt']) {
+            return strcmp($left['key'], $right['key']);
+        }
+        return $left['shared_cnt'] < $right['shared_cnt'] ? 1 : -1;
+    });
+    $rows = array_slice($rows, 0, $limit);
+
+    foreach ($rows as $index => $row) {
+        $rows[$index]['terminal_label'] = badash_terminal_label($row['terminal']);
+    }
 
     $users = array();
     foreach ($rows as $row) {

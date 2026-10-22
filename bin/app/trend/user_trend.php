@@ -25,11 +25,15 @@ function badash_user_trend($params)
     }
     $rows = badash_rows($ret);
 
+    $slices = badash_period_slices($period);
     $series = array();
+    for ($index = 0; $index < $slices; $index++) {
+        $series[$index] = array('time_slice' => $index, 'online_cnt' => 0, 'logon_cnt' => 0);
+    }
     foreach ($rows as $row) {
-        $slice = intval($row['time_slice']);
-        if (!isset($series[$slice])) {
-            $series[$slice] = array('time_slice' => $slice, 'online_cnt' => 0, 'logon_cnt' => 0);
+        $slice = (int)badash_i64set($row['time_slice']);
+        if ($slice < 0 || $slice >= $slices) {
+            continue;
         }
         $online = isset($row['online_cnt']) ? badash_num($row['online_cnt']) : 0;
         $logon = isset($row['logon_cnt']) ? badash_num($row['logon_cnt']) : 0;

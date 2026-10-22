@@ -677,6 +677,7 @@ pre {
     line-height: 1.6;
 }
 
-.section-body > * + * {
+.section-body > * + *,
+.section-content > * + * {
     margin-top: 14px;
 }

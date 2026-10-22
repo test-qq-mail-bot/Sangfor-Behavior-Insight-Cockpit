@@ -267,6 +267,81 @@ if (!function_exists('badash_params')) {
         return $number;
     }
 
+    function badash_i64($value)
+    {
+        if (is_int($value) || is_float($value)) {
+            return $value;
+        }
+        $text = (string)$value;
+        $length = strlen($text);
+        if ($length === 8) {
+            $part = unpack('V2', $text);
+            return $part[1] + $part[2] * 4294967296.0;
+        }
+        if ($length === 4) {
+            $part = unpack('V', $text);
+            return $part[1];
+        }
+        if ($length === 2) {
+            $part = unpack('n', $text);
+            return $part[1];
+        }
+        if ($length === 1) {
+            return ord($text);
+        }
+        $trimmed = trim($text);
+        if ($trimmed !== '' && is_numeric($trimmed)) {
+            return (float)$trimmed;
+        }
+        return 0;
+    }
+
+    function badash_i64set($value)
+    {
+        $text = (string)$value;
+        $length = strlen($text);
+        if ($length >= 3 && (($length - 1) % 2) === 0) {
+            $count = ord($text[0]);
+            if ($count === (($length - 1) / 2)) {
+                $sum = 0;
+                for ($index = 0; $index < $count; $index++) {
+                    $part = unpack('n', substr($text, 1 + $index * 2, 2));
+                    $sum += $part[1];
+                }
+                return $sum;
+            }
+        }
+        return badash_i64($value);
+    }
+
+    function badash_period_slices($period)
+    {
+        if ($period === '5min') {
+            return 288;
+        }
+        if ($period === '4hour') {
+            return 6;
+        }
+        return 24;
+    }
+
+    function badash_terminal_label($value)
+    {
+        $number = badash_i64($value);
+        $high = ((int)floor($number / 65536)) & 0xFFFF;
+        $low = ((int)$number) & 0xFFFF;
+        $types = array(0x0100 => 'PC', 0x0300 => 'Android', 0x0B00 => 'iOS', 1 => 'PC', 3 => 'Android', 11 => 'iOS');
+        $platforms = array(0x2000 => 'Web', 0x4000 => '客户端', 0x4400 => '其他');
+        $type = isset($types[$high]) ? $types[$high] : '终端' . $high;
+        if (isset($platforms[$low])) {
+            return $type . '（' . $platforms[$low] . '）';
+        }
+        if ($low === 0) {
+            return $type;
+        }
+        return $type . '（0x' . dechex($low) . '）';
+    }
+
     /**
      * 把某列转成数值（mdd 结果都是字符串）。
      */

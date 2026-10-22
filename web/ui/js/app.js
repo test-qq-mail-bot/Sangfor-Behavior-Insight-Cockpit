@@ -6,6 +6,12 @@
     var TABLE_LIMIT = 500;
     var TOKEN = '';
     var querySeq = 0;
+    var domSeq = 0;
+
+    function nextDomId(prefix) {
+        domSeq += 1;
+        return (prefix || 'ui') + '-' + domSeq;
+    }
 
     function getUrlParam(name) {
         var href = window.location.href;
@@ -248,15 +254,21 @@
 
     function section(title, hint) {
         var node = el('div', 'section');
+        node.id = nextDomId('section-' + state.active);
         var head = el('div', 'section-head');
+        head.id = node.id + '-head';
         head.appendChild(el('h2', '', title));
         if (hint) {
             head.appendChild(el('span', 'hint', hint));
         }
         node.appendChild(head);
         var body = el('div', 'section-body');
+        body.id = node.id + '-body';
+        var content = el('div', 'section-content');
+        content.id = node.id + '-content';
+        body.appendChild(content);
         node.appendChild(body);
-        return { node: node, body: body };
+        return { node: node, body: content, id: node.id };
     }
 
     function tableRaw(column, row) {
@@ -644,6 +656,10 @@
             return panel;
         }
 
+        if (!container.id) {
+            container.id = nextDomId('table-' + state.active);
+        }
+
         function render() {
             var filtered = sortedRows(filteredRows());
             var total = filtered.length;
@@ -659,6 +675,7 @@
 
             clear(container);
             var table = el('table', 'data');
+            table.id = container.id + '-data';
             var thead = el('thead');
             var headRow = el('tr');
 
@@ -718,6 +735,7 @@
             container.appendChild(table);
 
             var footer = el('div', 'table-footer');
+            footer.id = container.id + '-footer';
             footer.appendChild(el('div', 'table-total', '共 ' + total + ' 条'));
 
             var sizeBox = el('label', 'page-size');
@@ -818,7 +836,9 @@
 
     function renderChart(container, type, payload, options) {
         var wrap = el('div', 'chart-wrap');
+        wrap.id = nextDomId('chart-' + state.active);
         var canvas = document.createElement('canvas');
+        canvas.id = wrap.id + '-canvas';
         wrap.appendChild(canvas);
         container.appendChild(wrap);
         raf(function () {
@@ -831,9 +851,13 @@
     }
 
     function chips(container, items, current, onSelect) {
+        if (!container.id) {
+            container.id = nextDomId('chips-' + state.active);
+        }
         clear(container);
         for (var i = 0; i < items.length; i++) {
             var chip = el('div', 'chip' + (items[i][0] === current ? ' active' : ''), items[i][1]);
+            chip.id = container.id + '-item-' + i;
             chip.setAttribute('data-value', items[i][0]);
             chip.onclick = (function (value) {
                 return function () {
@@ -845,7 +869,11 @@
     }
 
     function addCard(container, label, value, sub) {
+        if (!container.id) {
+            container.id = nextDomId('cards-' + state.active);
+        }
         var card = el('div', 'card');
+        card.id = container.id + '-item-' + (container.childNodes.length + 1);
         card.appendChild(el('div', 'label', label));
         card.appendChild(el('div', 'value', value));
         if (sub) {
@@ -1154,11 +1182,12 @@
             'term_type',
             'app.terminal.term_rank',
             [
-                { key: 'key', label: '终端类型' },
+                { key: 'terminal_label', label: '终端类型', value: function (row) { return row.terminal_label || row.key; } },
                 { key: 'cnt', label: '接入数', num: true, format: num },
                 { key: 'user_cnt', label: '用户数', num: true, format: num }
             ],
-            'cnt'
+            'cnt',
+            'terminal_label'
         );
     }
 
@@ -1170,7 +1199,7 @@
             'app.terminal.share_rank',
             [
                 { key: 'user_name', label: '用户' },
-                { key: 'terminal', label: '终端' },
+                { key: 'terminal_label', label: '终端', value: function (row) { return row.terminal_label || row.terminal; } },
                 { key: 'shared_cnt', label: '共享终端数', num: true, format: num }
             ],
             'shared_cnt',
@@ -1245,6 +1274,10 @@
 
     function formField(labelText, input) {
         var label = el('label');
+        label.id = nextDomId('field-' + state.active);
+        if (!input.id) {
+            input.id = label.id + '-input';
+        }
         label.appendChild(el('span', '', labelText));
         label.appendChild(input);
         return label;
@@ -1255,6 +1288,7 @@
         root.appendChild(s.node);
 
         var grid = el('div', 'form-grid');
+        grid.id = nextDomId('form-' + state.active);
         var tableInput = el('input');
         tableInput.value = 'badash_ext';
         var pathInput = el('input');
@@ -1299,6 +1333,7 @@
         root.appendChild(s.node);
 
         var grid = el('div', 'form-grid');
+        grid.id = nextDomId('form-' + state.active);
         var textarea = el('textarea');
         textarea.value = JSON.stringify({
             table: 'badash_ext',
@@ -1349,6 +1384,7 @@
     function loadMeta(root) {
         var s = section('可查询的 mdd 中间表', '文档 2.1.5，点击查看表结构');
         var body = el('div');
+        body.id = s.id + '-list-content';
         s.body.appendChild(body);
         root.appendChild(s.node);
 
@@ -1360,9 +1396,11 @@
         return request('app.meta.tables', {}).then(function (data) {
             clear(body);
             var list = el('div', 'table-list');
+            list.id = s.id + '-list';
             var tables = data.tables || [];
             for (var i = 0; i < tables.length; i++) {
                 var item = el('div', 'table-item');
+                item.id = list.id + '-item-' + (i + 1);
                 item.appendChild(el('strong', '', tables[i].title));
                 item.appendChild(el('span', '', tables[i].name + ' · ' + tables[i].periods.join('/')));
                 item.onclick = (function (table) {
@@ -1429,6 +1467,7 @@
         clear(tabs);
         for (var i = 0; i < modules.length; i++) {
             var tab = el('div', 'tab' + (modules[i].id === state.active ? ' active' : ''), modules[i].title);
+            tab.id = 'tab-' + modules[i].id;
             tab.onclick = (function (module) {
                 return function () {
                     activate(module);
@@ -1446,7 +1485,9 @@
         renderTabs();
         clear(panel);
         var view = el('div', 'view');
+        view.id = 'view-' + module.id;
         var loading = el('div', 'loading', '加载中...');
+        loading.id = 'loading-' + module.id;
         panel.appendChild(loading);
         panel.appendChild(view);
         setStatus('加载中...', false);

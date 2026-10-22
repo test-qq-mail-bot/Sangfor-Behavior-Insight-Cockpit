@@ -25,9 +25,22 @@ function badash_flux_trend($params)
     }
     $rows = badash_rows($ret);
 
+    $slices = badash_period_slices($period);
     $series = array();
+    for ($index = 0; $index < $slices; $index++) {
+        $series[$index] = array(
+            'time_slice' => $index,
+            'up_flux' => 0,
+            'down_flux' => 0,
+            'total_flux' => 0,
+            'cnt' => 0,
+        );
+    }
     foreach ($rows as $row) {
-        $slice = intval($row['time_slice']);
+        $slice = (int)badash_i64set($row['time_slice']);
+        if ($slice < 0 || $slice >= $slices) {
+            continue;
+        }
         $up = isset($row['up_flux']) ? badash_num($row['up_flux']) : 0;
         $down = isset($row['down_flux']) ? badash_num($row['down_flux']) : 0;
         $series[$slice] = array(
