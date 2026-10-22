@@ -36,13 +36,13 @@ function badash_overview($params)
     return array(
         'start' => $start,
         'end' => $end,
-        'flux' => isset($summary['flux']) ? intval($summary['flux']) : 0,
-        'up_flux' => isset($summary['up_flux']) ? intval($summary['up_flux']) : 0,
-        'down_flux' => isset($summary['down_flux']) ? intval($summary['down_flux']) : 0,
-        'user_cnt' => isset($summary['user_cnt']) ? intval($summary['user_cnt']) : 0,
-        'event_cnt' => isset($summary['event_cnt']) ? intval($summary['event_cnt']) : 0,
-        'domain_cnt' => isset($domainRows[0]['domain_cnt']) ? intval($domainRows[0]['domain_cnt']) : 0,
-        'risk_cnt' => isset($riskRows[0]['risk_cnt']) ? intval($riskRows[0]['risk_cnt']) : 0,
+        'flux' => isset($summary['flux']) ? badash_num($summary['flux']) : 0,
+        'up_flux' => isset($summary['up_flux']) ? badash_num($summary['up_flux']) : 0,
+        'down_flux' => isset($summary['down_flux']) ? badash_num($summary['down_flux']) : 0,
+        'user_cnt' => isset($summary['user_cnt']) ? badash_num($summary['user_cnt']) : 0,
+        'event_cnt' => isset($summary['event_cnt']) ? badash_num($summary['event_cnt']) : 0,
+        'domain_cnt' => isset($domainRows[0]['domain_cnt']) ? badash_num($domainRows[0]['domain_cnt']) : 0,
+        'risk_cnt' => isset($riskRows[0]['risk_cnt']) ? badash_num($riskRows[0]['risk_cnt']) : 0,
     );
 }
 

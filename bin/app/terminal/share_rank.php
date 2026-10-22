@@ -13,7 +13,7 @@ if (!function_exists('badash_share_rank')) {
 function badash_share_rank($params)
 {
     list($start, $end) = badash_date_range($params);
-    $limit = badash_int($params, 'limit', 10, 1, 50);
+    $limit = badash_int($params, 'limit', 10, 1, 500);
 
     $sql = 'select /* COLLECT:collector.date@core */ /* ORDER:int64_desc */ '
         . '`user` `key`, sum(i(shared_tm_count)) shared_cnt, terminal '

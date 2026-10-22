@@ -13,7 +13,7 @@ if (!function_exists('badash_user_profile')) {
 function badash_user_profile($params)
 {
     list($start, $end) = badash_date_range($params);
-    $limit = badash_int($params, 'limit', 10, 1, 50);
+    $limit = badash_int($params, 'limit', 10, 1, 500);
 
     $riskSql = 'select /* COLLECT:collector.date@core */ /* ORDER:int64_desc */ '
         . '`user` `key`, sum(i(`count`)) risk_cnt '
@@ -40,7 +40,7 @@ function badash_user_profile($params)
         if (!isset($merged[$key])) {
             $merged[$key] = array('key' => $key, 'risk_cnt' => 0, 'action_cnt' => 0);
         }
-        $merged[$key]['risk_cnt'] += isset($row['risk_cnt']) ? intval($row['risk_cnt']) : 0;
+        $merged[$key]['risk_cnt'] += isset($row['risk_cnt']) ? badash_num($row['risk_cnt']) : 0;
     }
     foreach ($actionRows as $row) {
         $key = isset($row['key']) ? $row['key'] : '';
@@ -50,7 +50,7 @@ function badash_user_profile($params)
         if (!isset($merged[$key])) {
             $merged[$key] = array('key' => $key, 'risk_cnt' => 0, 'action_cnt' => 0);
         }
-        $merged[$key]['action_cnt'] += isset($row['action_cnt']) ? intval($row['action_cnt']) : 0;
+        $merged[$key]['action_cnt'] += isset($row['action_cnt']) ? badash_num($row['action_cnt']) : 0;
     }
 
     $users = array();
@@ -62,7 +62,7 @@ function badash_user_profile($params)
     $rows = array();
     foreach ($merged as $row) {
         $row['user_name'] = badash_display_name($names, $row['key']);
-        $row['score'] = $row['risk_cnt'] * 3 + $row['action_cnt'];
+        $row['score'] = badash_num($row['risk_cnt'] * 3 + $row['action_cnt']);
         $rows[] = $row;
     }
     usort($rows, 'badash_profile_compare');

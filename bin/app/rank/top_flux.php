@@ -13,7 +13,7 @@ if (!function_exists('badash_top_flux')) {
 function badash_top_flux($params)
 {
     list($start, $end) = badash_date_range($params);
-    $limit = badash_int($params, 'limit', 10, 1, 50);
+    $limit = badash_int($params, 'limit', 10, 1, 500);
     $period = badash_allowed(badash_param($params, 'period', '1day'), array('1day', '1week', '1month'), '1day');
     $dim = badash_allowed(badash_param($params, 'dim', 'user'), array('user', 'group'), 'user');
 

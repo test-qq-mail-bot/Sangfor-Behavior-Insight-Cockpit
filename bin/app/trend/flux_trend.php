@@ -30,10 +30,10 @@ function badash_flux_trend($params)
         $slice = intval($row['time_slice']);
         $series[$slice] = array(
             'time_slice' => $slice,
-            'up_flux' => isset($row['up_flux']) ? intval($row['up_flux']) : 0,
-            'down_flux' => isset($row['down_flux']) ? intval($row['down_flux']) : 0,
-            'total_flux' => isset($row['total_flux']) ? intval($row['total_flux']) : 0,
-            'cnt' => isset($row['cnt']) ? intval($row['cnt']) : 0,
+            'up_flux' => isset($row['up_flux']) ? badash_num($row['up_flux']) : 0,
+            'down_flux' => isset($row['down_flux']) ? badash_num($row['down_flux']) : 0,
+            'total_flux' => isset($row['total_flux']) ? badash_num($row['total_flux']) : 0,
+            'cnt' => isset($row['cnt']) ? badash_num($row['cnt']) : 0,
         );
     }
     ksort($series);

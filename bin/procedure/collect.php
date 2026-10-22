@@ -23,8 +23,8 @@ call_user_func(function () {
             return -1;
         }
 
-        $flux = isset($rows[0]['flux']) ? intval($rows[0]['flux']) : 0;
-        $users = isset($rows[0]['user_cnt']) ? intval($rows[0]['user_cnt']) : 0;
+        $flux = isset($rows[0]['flux']) ? badash_num($rows[0]['flux']) : 0;
+        $users = isset($rows[0]['user_cnt']) ? badash_num($rows[0]['user_cnt']) : 0;
         badash_info('daily summary date=' . $yesterday . ' flux=' . $flux . ' users=' . $users);
         return 0;
     };

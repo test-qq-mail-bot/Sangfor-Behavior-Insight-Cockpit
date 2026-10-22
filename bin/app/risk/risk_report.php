@@ -13,7 +13,7 @@ if (!function_exists('badash_risk_report')) {
 function badash_risk_report($params)
 {
     list($start, $end) = badash_date_range($params);
-    $limit = badash_int($params, 'limit', 10, 1, 50);
+    $limit = badash_int($params, 'limit', 10, 1, 500);
 
     $sql = 'select /* COLLECT:collector.date@core */ /* ORDER:int64_desc */ '
         . 'risk_type, risk_content, sum(i(`count`)) cnt, distinct_count(`user`) user_cnt '

@@ -31,8 +31,8 @@ function badash_user_trend($params)
         if (!isset($series[$slice])) {
             $series[$slice] = array('time_slice' => $slice, 'online_cnt' => 0, 'logon_cnt' => 0);
         }
-        $online = isset($row['online_cnt']) ? intval($row['online_cnt']) : 0;
-        $logon = isset($row['logon_cnt']) ? intval($row['logon_cnt']) : 0;
+        $online = isset($row['online_cnt']) ? badash_num($row['online_cnt']) : 0;
+        $logon = isset($row['logon_cnt']) ? badash_num($row['logon_cnt']) : 0;
         if ($online > $series[$slice]['online_cnt']) {
             $series[$slice]['online_cnt'] = $online;
         }

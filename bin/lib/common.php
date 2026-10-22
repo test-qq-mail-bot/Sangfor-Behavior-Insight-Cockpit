@@ -245,14 +245,36 @@ if (!function_exists('badash_params')) {
         return $rows;
     }
 
+    function badash_num($value)
+    {
+        if (is_int($value)) {
+            return $value;
+        }
+        if (is_float($value)) {
+            return is_finite($value) ? $value : 0;
+        }
+        $text = trim((string)$value);
+        if ($text === '' || !is_numeric($text)) {
+            return 0;
+        }
+        $number = (float)$text;
+        if (!is_finite($number)) {
+            return 0;
+        }
+        if ($number >= -2147483647.0 && $number <= 2147483647.0) {
+            return (int)$number;
+        }
+        return $number;
+    }
+
     /**
-     * 把某列转成 int（mdd 结果都是字符串）。
+     * 把某列转成数值（mdd 结果都是字符串）。
      */
     function badash_rows_int($rows, $field)
     {
         foreach ($rows as $index => $row) {
             if (isset($row[$field])) {
-                $rows[$index][$field] = intval($row[$field]);
+                $rows[$index][$field] = badash_num($row[$field]);
             }
         }
         return $rows;

@@ -3,6 +3,7 @@
 
     var APP_ID = 'cus_insight';
     var LAUNCH_URL = window.CUS_LAUNCH_URL || '/launch.php';
+    var TABLE_LIMIT = 500;
     var TOKEN = '';
     var querySeq = 0;
 
@@ -28,7 +29,6 @@
     var state = {
         start: '',
         end: '',
-        limit: 10,
         active: 'overview'
     };
 
@@ -112,7 +112,7 @@
     }
 
     function params(extra) {
-        var result = { start: state.start, end: state.end, limit: state.limit };
+        var result = { start: state.start, end: state.end, limit: TABLE_LIMIT };
         if (extra) {
             for (var key in extra) {
                 if (Object.prototype.hasOwnProperty.call(extra, key)) {
@@ -227,41 +227,561 @@
         return { node: node, body: body };
     }
 
-    function renderTable(container, columns, rows) {
-        if (!rows || rows.length === 0) {
-            container.appendChild(el('div', 'empty', '暂无数据'));
-            return;
-        }
-        var table = el('table', 'data');
-        var thead = el('thead');
-        var headRow = el('tr');
-        for (var i = 0; i < columns.length; i++) {
-            headRow.appendChild(el('th', '', columns[i].label));
-        }
-        thead.appendChild(headRow);
-        table.appendChild(thead);
+    function tableRaw(column, row) {
+        return typeof column.value === 'function' ? column.value(row) : row[column.key];
+    }
 
-        var tbody = el('tbody');
-        for (var r = 0; r < rows.length; r++) {
-            var row = rows[r];
-            var tr = el('tr');
-            for (var c = 0; c < columns.length; c++) {
-                var column = columns[c];
-                var raw = typeof column.value === 'function' ? column.value(row) : row[column.key];
-                var text;
-                if (column.format) {
-                    text = column.format(raw, row);
-                } else if (raw === undefined || raw === null || raw === '') {
-                    text = '-';
-                } else {
-                    text = raw;
-                }
-                tr.appendChild(el('td', column.num ? 'num' : '', text));
-            }
-            tbody.appendChild(tr);
+    function tableRawString(column, row) {
+        var raw = tableRaw(column, row);
+        return raw === undefined || raw === null ? '' : String(raw);
+    }
+
+    function tableCellText(column, row) {
+        var raw = tableRaw(column, row);
+        if (column.format) {
+            return column.format(raw, row);
         }
-        table.appendChild(tbody);
-        container.appendChild(table);
+        if (raw === undefined || raw === null || raw === '') {
+            return '-';
+        }
+        return String(raw);
+    }
+
+    function tableNumber(value) {
+        if (value === undefined || value === null || value === '') {
+            return null;
+        }
+        var number = Number(value);
+        return isFinite(number) ? number : null;
+    }
+
+    function tableTextCompare(a, b) {
+        var left = String(a === undefined || a === null ? '' : a);
+        var right = String(b === undefined || b === null ? '' : b);
+        try {
+            return left.localeCompare(right, 'zh-CN', { numeric: true, sensitivity: 'base' });
+        } catch (error) {
+            left = left.toLowerCase();
+            right = right.toLowerCase();
+            if (left < right) {
+                return -1;
+            }
+            if (left > right) {
+                return 1;
+            }
+            return 0;
+        }
+    }
+
+    function tablePageWindow(page, totalPages) {
+        if (totalPages <= 5) {
+            var all = [];
+            for (var i = 1; i <= totalPages; i++) {
+                all.push(i);
+            }
+            return all;
+        }
+        var start;
+        var end;
+        if (page <= 2) {
+            start = 1;
+            end = 5;
+        } else if (page >= totalPages - 1) {
+            start = totalPages - 4;
+            end = totalPages;
+        } else {
+            start = page - 2;
+            end = page + 2;
+        }
+        var pages = [];
+        for (var n = start; n <= end; n++) {
+            pages.push(n);
+        }
+        return pages;
+    }
+
+    function stopTableEvent(event) {
+        event = event || window.event;
+        if (event.stopPropagation) {
+            event.stopPropagation();
+        }
+    }
+
+    function renderTable(container, columns, rows, options) {
+        columns = columns || [];
+        rows = rows || [];
+        options = options || {};
+
+        var pageSize = options.pageSize || 10;
+        var sortKey = options.defaultSortKey || (columns[0] ? columns[0].key : '');
+        var sortDir = options.defaultSortDir === 'desc' ? 'desc' : 'asc';
+        var page = 1;
+        var openKey = null;
+        var draft = null;
+        var filters = {};
+
+        for (var f = 0; f < columns.length; f++) {
+            filters[columns[f].key] = [];
+        }
+
+        function findColumn(key) {
+            for (var i = 0; i < columns.length; i++) {
+                if (columns[i].key === key) {
+                    return columns[i];
+                }
+            }
+            return null;
+        }
+
+        function hasFilter(key) {
+            return filters[key] && filters[key].length > 0;
+        }
+
+        function filteredRows(ignoreKey) {
+            var result = [];
+            for (var r = 0; r < rows.length; r++) {
+                var row = rows[r];
+                var keep = true;
+                for (var c = 0; c < columns.length; c++) {
+                    var column = columns[c];
+                    var selected = filters[column.key];
+                    if (column.key !== ignoreKey && selected && selected.length > 0) {
+                        if (selected.indexOf(tableRawString(column, row)) === -1) {
+                            keep = false;
+                            break;
+                        }
+                    }
+                }
+                if (keep) {
+                    result.push(row);
+                }
+            }
+            return result;
+        }
+
+        function sortedRows(list) {
+            var decorated = [];
+            for (var i = 0; i < list.length; i++) {
+                decorated.push({ row: list[i], index: i });
+            }
+            var column = findColumn(sortKey);
+            decorated.sort(function (a, b) {
+                var result = 0;
+                if (column) {
+                    var left = tableRaw(column, a.row);
+                    var right = tableRaw(column, b.row);
+                    var leftNumber = tableNumber(left);
+                    var rightNumber = tableNumber(right);
+                    if (leftNumber !== null && rightNumber !== null) {
+                        if (leftNumber < rightNumber) {
+                            result = -1;
+                        } else if (leftNumber > rightNumber) {
+                            result = 1;
+                        }
+                    } else {
+                        result = tableTextCompare(left, right);
+                    }
+                }
+                if (result === 0) {
+                    return a.index - b.index;
+                }
+                return sortDir === 'asc' ? result : -result;
+            });
+            var output = [];
+            for (var d = 0; d < decorated.length; d++) {
+                output.push(decorated[d].row);
+            }
+            return output;
+        }
+
+        function tableOptions(key) {
+            var column = findColumn(key);
+            var list = filteredRows(key);
+            var seen = {};
+            var opts = [];
+            for (var i = 0; i < list.length; i++) {
+                var value = tableRawString(column, list[i]);
+                if (!Object.prototype.hasOwnProperty.call(seen, value)) {
+                    seen[value] = true;
+                    opts.push({ value: value, label: tableCellText(column, list[i]) });
+                }
+            }
+            opts.sort(function (a, b) {
+                var left = tableNumber(a.value);
+                var right = tableNumber(b.value);
+                if (column.num && left !== null && right !== null) {
+                    return left - right;
+                }
+                return tableTextCompare(a.label, b.label);
+            });
+            return opts;
+        }
+
+        function optionCounts(key) {
+            var column = findColumn(key);
+            var list = filteredRows(key);
+            var counts = {};
+            for (var i = 0; i < list.length; i++) {
+                var value = tableRawString(column, list[i]);
+                counts[value] = (counts[value] || 0) + 1;
+            }
+            return counts;
+        }
+
+        function pageCount() {
+            return Math.max(1, Math.ceil(filteredRows().length / pageSize));
+        }
+
+        function changePage(value) {
+            page = Math.min(Math.max(1, value), pageCount());
+            openKey = null;
+            draft = null;
+            render();
+        }
+
+        function toggleSort(key) {
+            if (sortKey === key) {
+                sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortKey = key;
+                sortDir = 'asc';
+            }
+            render();
+        }
+
+        function toggleFilter(key) {
+            if (openKey === key) {
+                openKey = null;
+                draft = null;
+            } else {
+                openKey = key;
+                draft = (filters[key] || []).slice();
+            }
+            render();
+        }
+
+        function setDraft(action) {
+            if (!openKey) {
+                return;
+            }
+            var opts = tableOptions(openKey);
+            var values = [];
+            for (var i = 0; i < opts.length; i++) {
+                values.push(opts[i].value);
+            }
+            if (action === 'all') {
+                draft = values;
+            } else if (action === 'inverse') {
+                var inverse = [];
+                for (var v = 0; v < values.length; v++) {
+                    if (draft.indexOf(values[v]) === -1) {
+                        inverse.push(values[v]);
+                    }
+                }
+                draft = inverse;
+            } else if (action === 'duplicates' || action === 'unique') {
+                var counts = optionCounts(openKey);
+                var picked = [];
+                for (var p = 0; p < values.length; p++) {
+                    var count = counts[values[p]] || 0;
+                    if ((action === 'duplicates' && count > 1) ||
+                        (action === 'unique' && count === 1)) {
+                        picked.push(values[p]);
+                    }
+                }
+                draft = picked;
+            }
+            render();
+        }
+
+        function selectDraft(value, checked) {
+            if (!draft) {
+                draft = [];
+            }
+            var index = draft.indexOf(value);
+            if (checked && index === -1) {
+                draft.push(value);
+            } else if (!checked && index !== -1) {
+                draft.splice(index, 1);
+            }
+        }
+
+        function applyDraft() {
+            if (!openKey) {
+                return;
+            }
+            filters[openKey] = draft ? draft.slice() : [];
+            openKey = null;
+            draft = null;
+            var last = pageCount();
+            if (page > last) {
+                page = last;
+            }
+            render();
+        }
+
+        function clearDraft() {
+            draft = [];
+            render();
+        }
+
+        function sortFromPanel(direction) {
+            if (!openKey) {
+                return;
+            }
+            sortKey = openKey;
+            sortDir = direction;
+            render();
+        }
+
+        function buildFilterPanel(column) {
+            var panel = el('div', 'filter-panel');
+            panel.onclick = stopTableEvent;
+
+            var head = el('div', 'filter-panel-head');
+            head.appendChild(el('span', 'filter-title', column.label + ' 筛选'));
+            panel.appendChild(head);
+
+            var sortActions = el('div', 'filter-sort');
+            var asc = el('button', 'filter-link' + (sortKey === column.key && sortDir === 'asc' ? ' active' : ''), '升序');
+            asc.type = 'button';
+            asc.onclick = function () {
+                sortFromPanel('asc');
+            };
+            var desc = el('button', 'filter-link' + (sortKey === column.key && sortDir === 'desc' ? ' active' : ''), '降序');
+            desc.type = 'button';
+            desc.onclick = function () {
+                sortFromPanel('desc');
+            };
+            sortActions.appendChild(asc);
+            sortActions.appendChild(desc);
+            panel.appendChild(sortActions);
+
+            var tools = el('div', 'filter-tools');
+            var toolActions = [
+                ['all', '全选'],
+                ['inverse', '反选'],
+                ['duplicates', '重复项'],
+                ['unique', '唯一项']
+            ];
+            for (var t = 0; t < toolActions.length; t++) {
+                (function (action, label) {
+                    var button = el('button', 'filter-link', label);
+                    button.type = 'button';
+                    button.onclick = function () {
+                        setDraft(action);
+                    };
+                    tools.appendChild(button);
+                })(toolActions[t][0], toolActions[t][1]);
+            }
+            panel.appendChild(tools);
+
+            var list = el('div', 'filter-list');
+            var opts = tableOptions(column.key);
+            if (opts.length === 0) {
+                list.appendChild(el('div', 'filter-empty', '暂无可选项'));
+            } else {
+                for (var o = 0; o < opts.length; o++) {
+                    (function (item) {
+                        var label = el('label', 'filter-option');
+                        var input = document.createElement('input');
+                        input.type = 'checkbox';
+                        input.checked = draft.indexOf(item.value) !== -1;
+                        input.onchange = function () {
+                            selectDraft(item.value, input.checked);
+                        };
+                        label.appendChild(input);
+                        label.appendChild(el('span', '', item.label));
+                        list.appendChild(label);
+                    })(opts[o]);
+                }
+            }
+            panel.appendChild(list);
+
+            var foot = el('div', 'filter-foot');
+            var apply = el('button', 'btn-primary filter-apply', '应用');
+            apply.type = 'button';
+            apply.onclick = applyDraft;
+            var clearButton = el('button', 'filter-clear', '清空');
+            clearButton.type = 'button';
+            clearButton.onclick = clearDraft;
+            foot.appendChild(apply);
+            foot.appendChild(clearButton);
+            panel.appendChild(foot);
+
+            return panel;
+        }
+
+        function render() {
+            var filtered = sortedRows(filteredRows());
+            var total = filtered.length;
+            var totalPages = Math.max(1, Math.ceil(total / pageSize));
+            if (page > totalPages) {
+                page = totalPages;
+            }
+            if (page < 1) {
+                page = 1;
+            }
+            var start = (page - 1) * pageSize;
+            var visible = filtered.slice(start, start + pageSize);
+
+            clear(container);
+            var table = el('table', 'data');
+            var thead = el('thead');
+            var headRow = el('tr');
+
+            for (var c = 0; c < columns.length; c++) {
+                (function (column) {
+                    var th = el('th');
+                    var wrap = el('div', 'th-wrap');
+                    var area = el('div', 'sort-area');
+                    area.appendChild(el('span', 'sort-label', column.label));
+                    if (sortKey === column.key) {
+                        area.appendChild(el('span', 'sort-icon', sortDir === 'asc' ? '↑' : '↓'));
+                    }
+                    wrap.appendChild(area);
+
+                    var button = el('button', 'filter-btn' + (hasFilter(column.key) ? ' active' : ''), hasFilter(column.key) ? '已筛选' : '筛选');
+                    button.type = 'button';
+                    button.onclick = function (event) {
+                        stopTableEvent(event);
+                        toggleFilter(column.key);
+                    };
+                    wrap.appendChild(button);
+
+                    if (openKey === column.key) {
+                        wrap.appendChild(buildFilterPanel(column));
+                    }
+
+                    th.appendChild(wrap);
+                    th.onclick = function () {
+                        toggleSort(column.key);
+                    };
+                    headRow.appendChild(th);
+                })(columns[c]);
+            }
+
+            thead.appendChild(headRow);
+            table.appendChild(thead);
+
+            var tbody = el('tbody');
+            if (visible.length === 0) {
+                var emptyRow = el('tr');
+                var emptyCell = el('td', 'table-empty');
+                emptyCell.colSpan = columns.length;
+                emptyCell.appendChild(el('div', 'empty', '暂无符合条件的数据'));
+                emptyRow.appendChild(emptyCell);
+                tbody.appendChild(emptyRow);
+            } else {
+                for (var r = 0; r < visible.length; r++) {
+                    var row = visible[r];
+                    var tr = el('tr');
+                    for (var col = 0; col < columns.length; col++) {
+                        tr.appendChild(el('td', columns[col].num ? 'num' : '', tableCellText(columns[col], row)));
+                    }
+                    tbody.appendChild(tr);
+                }
+            }
+            table.appendChild(tbody);
+            container.appendChild(table);
+
+            var footer = el('div', 'table-footer');
+            footer.appendChild(el('div', 'table-total', '共 ' + total + ' 条'));
+
+            var sizeBox = el('label', 'page-size');
+            sizeBox.appendChild(el('span', '', '每页'));
+            var sizeSelect = document.createElement('select');
+            var sizes = [10, 20, 50, 100];
+            for (var s = 0; s < sizes.length; s++) {
+                var option = document.createElement('option');
+                option.value = String(sizes[s]);
+                option.textContent = sizes[s] + ' 条/页';
+                if (sizes[s] === pageSize) {
+                    option.selected = true;
+                }
+                sizeSelect.appendChild(option);
+            }
+            sizeSelect.onchange = function () {
+                pageSize = parseInt(sizeSelect.value, 10) || 10;
+                page = 1;
+                openKey = null;
+                draft = null;
+                render();
+            };
+            sizeBox.appendChild(sizeSelect);
+            footer.appendChild(sizeBox);
+
+            var pager = el('div', 'pager');
+            var prev = el('button', 'page-arrow', '‹');
+            prev.type = 'button';
+            prev.title = '上一页';
+            prev.disabled = page <= 1;
+            prev.onclick = function () {
+                changePage(page - 1);
+            };
+            pager.appendChild(prev);
+
+            function appendPage(number) {
+                var button = el('button', 'page-number' + (number === page ? ' active' : ''), number);
+                button.type = 'button';
+                button.onclick = function () {
+                    changePage(number);
+                };
+                pager.appendChild(button);
+            }
+
+            function appendEllipsis() {
+                pager.appendChild(el('span', 'page-ellipsis', '...'));
+            }
+
+            var windowPages = tablePageWindow(page, totalPages);
+            if (windowPages[0] > 1) {
+                appendPage(1);
+                if (windowPages[0] > 2) {
+                    appendEllipsis();
+                }
+            }
+            for (var w = 0; w < windowPages.length; w++) {
+                appendPage(windowPages[w]);
+            }
+            var windowLast = windowPages[windowPages.length - 1];
+            if (windowLast < totalPages) {
+                if (windowLast < totalPages - 1) {
+                    appendEllipsis();
+                }
+                appendPage(totalPages);
+            }
+
+            var next = el('button', 'page-arrow', '›');
+            next.type = 'button';
+            next.title = '下一页';
+            next.disabled = page >= totalPages;
+            next.onclick = function () {
+                changePage(page + 1);
+            };
+            pager.appendChild(next);
+            footer.appendChild(pager);
+
+            container.appendChild(footer);
+        }
+
+        document.addEventListener('click', function (event) {
+            if (!container.parentNode || !openKey) {
+                return;
+            }
+            var target = event.target;
+            while (target) {
+                if (target === container) {
+                    return;
+                }
+                target = target.parentNode;
+            }
+            openKey = null;
+            draft = null;
+            render();
+        });
+
+        render();
     }
 
     function renderChart(container, type, payload) {
@@ -349,7 +869,7 @@
                 }
                 clear(body);
                 var rows = data.rows || [];
-                renderChart(body, 'bar', rows.map(function (row) {
+                renderChart(body, 'bar', rows.slice(0, 10).map(function (row) {
                     return { label: row.name || row.key, value: row.flux };
                 }));
                 var holder = el('div');
@@ -381,7 +901,7 @@
         root.appendChild(s.node);
         return request('app.rank.top_duration', params()).then(function (data) {
             var rows = data.rows || [];
-            renderChart(s.body, 'bar', rows.map(function (row) {
+            renderChart(s.body, 'bar', rows.slice(0, 10).map(function (row) {
                 return { label: row.user_name || row.key, value: row.seconds };
             }));
             var holder = el('div');
@@ -475,7 +995,7 @@
         root.appendChild(s.node);
         return request('app.domain.access_rank', params()).then(function (data) {
             var rows = data.rows || [];
-            renderChart(s.body, 'bar', rows.map(function (row) {
+            renderChart(s.body, 'bar', rows.slice(0, 10).map(function (row) {
                 return { label: row.key, value: row.flux };
             }));
             var holder = el('div');
@@ -511,7 +1031,7 @@
             request('app.domain.http_type', params({ group: group })).then(function (data) {
                 clear(body);
                 var rows = data.rows || [];
-                renderChart(body, 'bar', rows.map(function (row) {
+                renderChart(body, 'bar', rows.slice(0, 10).map(function (row) {
                     return { label: row.key, value: row.flux };
                 }));
                 var holder = el('div');
@@ -535,7 +1055,7 @@
         return request(apiName, params()).then(function (data) {
             var rows = data.rows || [];
             if (chartValue) {
-                renderChart(s.body, 'bar', rows.map(function (row) {
+                renderChart(s.body, 'bar', rows.slice(0, 10).map(function (row) {
                     return { label: row[chartLabel || 'key'] || row.key, value: row[chartValue] };
                 }));
             }
@@ -937,7 +1457,6 @@
             state.start = state.end;
             state.end = tmp;
         }
-        state.limit = parseInt(document.getElementById('limit').value, 10) || 10;
     }
 
     function init() {
@@ -955,13 +1474,6 @@
         renderTabs();
 
         document.getElementById('refresh').onclick = function () {
-            readFilters();
-            activate(modules.filter(function (item) {
-                return item.id === state.active;
-            })[0] || modules[0]);
-        };
-
-        document.getElementById('limit').onchange = function () {
             readFilters();
             activate(modules.filter(function (item) {
                 return item.id === state.active;
